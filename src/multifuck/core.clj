@@ -1,15 +1,6 @@
 (ns multifuck.core
   (:gen-class))
 
-(def OP-POINTER-INC \>)
-(def OP-POINTER-DEC \<)
-(def OP-VALUE-INC \+)
-(def OP-VALUE-DEC \-)
-(def OP-OUTPUT \.)
-(def OP-INPUT \,)
-(def OP-WHILE-OPEN \[)
-(def OP-WHILE-CLOSE \])
-
 (defn initialize [memory-size]
   {:program nil :memory (vec (take memory-size (repeat 0))) :data-ptr 0
    :instruction-ptr 0 :operations 0 :while-stack (list)})
@@ -39,33 +30,23 @@
   (if (not= (value state) 0) (instruction-pointer-reset state) (update-in state [:while-stack] rest)))
 
 (def operation-map
-  {OP-POINTER-INC data-pointer-inc
-   OP-POINTER-DEC data-pointer-dec
-   OP-VALUE-INC value-inc
-   OP-VALUE-DEC value-dec
-   OP-OUTPUT output
-   OP-INPUT input
-   OP-WHILE-OPEN while-open
-   OP-WHILE-CLOSE while-close})
+  {\> data-pointer-inc  \< data-pointer-dec   \+ value-inc
+   \- value-dec         \. output             \, input 
+   \[ while-open        \] while-close})
 
 (defn execute-command [state]
   (let [current-instruction (instruction state)
         run-fn (operation-map current-instruction)]
-    (when (not (fn? run-fn))
-      (ex-info "Command function not found." state))
+    (when (not (fn? run-fn)) (ex-info "Command function not found." state))
     (run-fn state)))
 
 (defn step [state]
-  (-> state
-      (execute-command)
-      (instruction-pointer-inc)
-      (update-in [:operations] inc)))
+  (-> state (execute-command) (instruction-pointer-inc) (update-in [:operations] inc)))
 
 (defn run [state]
   (let [current-instruction (instruction state)]
     (if (nil? current-instruction)
-      {:status "complete"
-       :operations (:operations state)}
+      {:status "complete" :operations (:operations state)}
       (recur (step state)))))
 
 (def HELLO-WORLD "++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.")
@@ -73,7 +54,5 @@
 (defn -main
   [& args]
   (println "Multifuck 0.1.0")
-  (-> (initialize 32)
-        (load-program HELLO-WORLD)
-        (run)))
+  (-> (initialize 32) (load-program HELLO-WORLD) (run)))
 
